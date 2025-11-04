@@ -1,0 +1,206 @@
+#include <iostream>
+#include <vector>
+#include <iomanip>
+#include <memory>
+using namespace std;
+class Product {
+protected:
+    int id;
+    string name;
+    double price;
+
+public:
+    Product(int id, string name, double price)
+        : id(id), name(name), price(price) {}
+
+    virtual void display() const {
+        cout << left << setw(5) << id
+             << setw(15) << name
+             << "₹" << fixed << setprecision(2) << price;
+    }
+
+    virtual string getCategory() const = 0;  // Pure virtual for polymorphism
+
+    int getId() const { return id; }
+    string getName() const { return name; }
+    double getPrice() const { return price; }
+};
+class Electronics : public Product {
+    int warranty;  
+public:
+    Electronics(int id, string name, double price, int warranty)
+        : Product(id, name, price), warranty(warranty) {}
+
+    void display() const override {
+        Product::display();
+        cout << " | Warranty: " << warranty << " years\n";
+    }
+
+    string getCategory() const override { return "Electronics"; }
+};
+
+class Clothing : public Product {
+    string size;
+public:
+    Clothing(int id, string name, double price, string size)
+        : Product(id, name, price), size(size) {}
+
+    void display() const override {
+        Product::display();
+        cout << " | Size: " << size << endl;
+    }
+
+    string getCategory() const override { return "Clothing"; }
+};
+
+class Grocery : public Product {
+    string expiryDate;
+public:
+    Grocery(int id, string name, double price, string expiry)
+        : Product(id, name, price), expiryDate(expiry) {}
+
+    void display() const override {
+        Product::display();
+        cout << " | Expiry: " << expiryDate << endl;
+    }
+
+    string getCategory() const override { return "Grocery"; }
+};
+class CartItem {
+    shared_ptr<Product> product;
+    int quantity;
+public:
+    CartItem(shared_ptr<Product> product, int quantity)
+        : product(product), quantity(quantity) {}
+
+    double getTotalPrice() const {
+        return product->getPrice() * quantity;
+    }
+
+    void display() const {
+        cout << left << setw(15) << product->getName()
+             << setw(10) << quantity
+             << "₹" << fixed << setprecision(2) << getTotalPrice() << endl;
+    }
+};
+class Cart {
+    vector<CartItem> items;
+public:
+    void addToCart(shared_ptr<Product> product, int quantity) {
+        items.emplace_back(product, quantity);
+        cout << "✅ Added " << quantity << " x " << product->getName() << " to cart.\n";
+    }
+
+    void displayCart() const {
+        cout << "\n🛍  Your Cart:\n";
+        cout << left << setw(15) << "Product"
+             << setw(10) << "Qty"
+             << "Total\n";
+        cout << "------------------------------------\n";
+        double total = 0;
+        for (auto &item : items) {
+            item.display();
+            total += item.getTotalPrice();
+        }
+        cout << "------------------------------------\n";
+        cout << "Grand Total: ₹" << fixed << setprecision(2) << total << "\n";
+    }
+
+    bool isEmpty() const {
+        return items.empty();
+    }
+};
+class Customer {
+    string name;
+    Cart cart;
+public:
+    Customer(string name) : name(name) {}
+
+    string getName() const { return name; }
+    Cart& getCart() { return cart; }
+};
+void showProducts(const vector<shared_ptr<Product>>& products) {
+    cout << "\n🛒 Available Products:\n";
+    cout << left << setw(5) << "ID" << setw(15) << "Name" << "Price" << endl;
+    cout << "-----------------------------------------\n";
+    for (auto &p : products) {
+        p->display();
+    }
+    cout << "-----------------------------------------\n";
+}
+int main() {
+    vector<shared_ptr<Product>> products = {
+        make_shared<Electronics>(1, "Smartphone", 14999.99, 2),
+        make_shared<Electronics>(2, "Laptop", 55999.50, 3),
+        make_shared<Clothing>(3, "T-Shirt", 499.99, "L"),
+        make_shared<Clothing>(4, "Jeans", 999.99, "M"),
+        make_shared<Grocery>(5, "Rice (5kg)", 299.99, "12/2025"),
+        make_shared<Grocery>(6, "Milk (1L)", 59.99, "11/2025")
+    };
+
+    cout << "===== Welcome to the Online Shopping System =====\n";
+    string custName;
+    cout << "Enter your name: ";
+    getline(cin, custName);
+    Customer customer(custName);
+
+    int choice;
+    do {
+        cout << "\n1. View Products\n2. Add to Cart\n3. View Cart\n4. Checkout\n0. Exit\n";
+        cout << "Enter your choice: ";
+        cin >> choice;
+
+        switch (choice) {
+        case 1:
+            showProducts(products);
+            break;
+
+        case 2: {
+            int pid, qty;
+            showProducts(products);
+            cout << "Enter Product ID to add: ";
+            cin >> pid;
+            cout << "Enter Quantity: ";
+            cin >> qty;
+
+            bool found = false;
+            for (auto &p : products) {
+                if (p->getId() == pid) {
+                    customer.getCart().addToCart(p, qty);
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) cout << "❌ Invalid Product ID!\n";
+            break;
+        }
+
+        case 3:
+            if (customer.getCart().isEmpty())
+                cout << "🛒 Your cart is empty!\n";
+            else
+                customer.getCart().displayCart();
+            break;
+
+        case 4:
+            if (customer.getCart().isEmpty())
+                cout << "🛒 Your cart is empty!\n";
+            else {
+                cout << "\n💳 Checkout Summary for " << customer.getName() << ":\n";
+                customer.getCart().displayCart();
+                cout << "Thank you for shopping with us! 🥳\n";
+                choice = 0; 
+            }
+            break;
+
+        case 0:
+            cout << "Goodbye! 👋\n";
+            break;
+
+        default:
+            cout << "❌ Invalid choice! Try again.\n";
+        }
+    } while (choice != 0);
+
+    return 0;
+}
